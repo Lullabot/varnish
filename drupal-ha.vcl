@@ -107,7 +107,7 @@ sub vcl_recv {
 
     # 3. Match the cookies we want to keep, adding the space we removed
     #    previously back. (\1) is first matching group in the regsuball.
-    set req.http.Cookie = regsuball(req.http.Cookie, ";(SESS[a-z0-9]+|NO_CACHE)=", "; \1=");
+    set req.http.Cookie = regsuball(req.http.Cookie, ";(S?SESS[a-z0-9]+|NO_CACHE)=", "; \1=");
 
     # 4. Remove all other cookies, identifying them by the fact that they have
     #    no space after the preceding semi-colon.
