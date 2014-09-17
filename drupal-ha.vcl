@@ -99,10 +99,22 @@ sub vcl_recv {
   # Varnish cache temporarily. The session cookie allows all authenticated users
   # to pass through as long as they're logged in.
   if (req.http.Cookie) {
+    # 1. Append a semi-colon to the front of the cookie string.
     set req.http.Cookie = ";" + req.http.Cookie;
+
+    # 2. Remove all spaces that appear after semi-colons.
     set req.http.Cookie = regsuball(req.http.Cookie, "; +", ";");
+
+    # 3. Match the cookies we want to keep, adding the space we removed
+    #    previously back. (\1) is first matching group in the regsuball.
     set req.http.Cookie = regsuball(req.http.Cookie, ";(SESS[a-z0-9]+|NO_CACHE)=", "; \1=");
+
+    # 4. Remove all other cookies, identifying them by the fact that they have
+    #    no space after the preceding semi-colon.
     set req.http.Cookie = regsuball(req.http.Cookie, ";[^ ][^;]*", "");
+
+    # 5. Remove all spaces and semi-colons from the beginning and end of the
+    #    cookie string.
     set req.http.Cookie = regsuball(req.http.Cookie, "^[; ]+|[; ]+$", "");
 
     if (req.http.Cookie == "") {
