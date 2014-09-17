@@ -12,7 +12,9 @@ import std;
 # Define a list of IP addresses or subnets that have privileged access to
 # certain files that should not be accessible publicly.
 acl privileged {
-  "192.10.0.0"/24;
+  "10.0.0.0"/8;
+  "172.16.0.0"/12;
+  "192.168.0.0"/16;
 }
 
 # Define the list of backends (web servers).
