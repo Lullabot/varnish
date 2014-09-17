@@ -30,6 +30,20 @@ sub vcl_init {
 # Respond to incoming requests.
 sub vcl_recv {
 
+  # Do not allow outside access to cron.php or install.php.
+  if (req.url ~ "^/(cron|instal|update|xmlrpc)\.php$" && !client.ip ~ privileged) {
+    # Have Varnish throw the error directly.
+    return(synth(404, "Page not found."));
+
+    # Use a custom error page that you've defined in Drupal at the path "404".
+    # set req.url = "/404";
+
+    # Strip the trailing .php, forcing requests to go through index.php so Drupal
+    # can provide its own 404 handling, and will have a relavent URL for things
+    # like an automatic search.
+    #set req.url = regsuball(req.url, "\.php.*", "");
+  }
+
   # Use anonymous, cached pages if all backends are down.
   if (!std.healthy(req.backend_hint)) {
     unset req.http.Cookie;
@@ -50,14 +64,6 @@ sub vcl_recv {
   # Pipe these paths directly to Apache for streaming.
   if (req.url ~ "^/admin/content/backup_migrate/export") {
     return (pipe);
-  }
-
-  # Do not allow outside access to cron.php or install.php.
-  if (req.url ~ "^/(cron|install)\.php$" && !client.ip ~ privileged) {
-    # Have Varnish throw the error directly.
-    return(synth(404, "Page not found."));
-    # Use a custom error page that you've defined in Drupal at the path "404".
-    # set req.url = "/404";
   }
 
   # Handle compression correctly. Different browsers send different
