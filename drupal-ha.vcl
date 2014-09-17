@@ -106,7 +106,7 @@ sub vcl_recv {
   # Varnish cache temporarily. The session cookie allows all authenticated users
   # to pass through as long as they're logged in.
   if (req.http.Cookie) {
-    set req.http.Cookie = ";" req.http.Cookie;
+    set req.http.Cookie = ";" + req.http.Cookie;
     set req.http.Cookie = regsuball(req.http.Cookie, "; +", ";");
     set req.http.Cookie = regsuball(req.http.Cookie, ";(SESS[a-z0-9]+|NO_CACHE)=", "; \1=");
     set req.http.Cookie = regsuball(req.http.Cookie, ";[^ ][^;]*", "");
@@ -173,7 +173,7 @@ sub vcl_error {
     <h1 class="title">Page Unavailable</h1>
     <p>The page you requested is temporarily unavailable.</p>
     <p>We're redirecting you to the <a href="/">homepage</a> in 5 seconds.</p>
-    <div class="error">(Error "} obj.status " " obj.response {")</div>
+    <div class="error">(Error "} + obj.status + " " + obj.response + {")</div>
   </div>
 </body>
 </html>
