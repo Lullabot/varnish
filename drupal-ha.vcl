@@ -5,10 +5,13 @@
 # http://www.lullabot.com/articles/varnish-multiple-web-servers-drupal
 #
 
-# Define the internal network subnet.
-# These are used below to allow internal access to certain files while not
-# allowing access from the public internet.
-acl internal {
+vcl 4.0;
+import directors;
+import std;
+
+# Define a list of IP addresses or subnets that have privileged access to
+# certain files that should not be accessible publicly.
+acl privileged {
   "192.10.0.0"/24;
 }
 
@@ -17,38 +20,20 @@ acl internal {
 backend web1 { .host = "192.10.0.1"; .probe = { .url = "/status.php"; .interval = 5s; .timeout = 1s; .window = 5;.threshold = 3; }}
 backend web2 { .host = "192.10.0.2"; .probe = { .url = "/status.php"; .interval = 5s; .timeout = 1s; .window = 5;.threshold = 3; }}
 
-# Port 443 Backend Servers for SSL
-backend web1_ssl { .host = "192.10.0.1"; .port = "443"; .probe = { .url = "/status.php"; .interval = 5s; .timeout = 1 s; .window = 5;.threshold = 3; }}
-backend web2_ssl { .host = "192.10.0.2"; .port = "443"; .probe = { .url = "/status.php"; .interval = 5s; .timeout = 1 s; .window = 5;.threshold = 3; }}
-
-# Define the director that determines how to distribute incoming requests.
-director default_director round-robin {
-  { .backend = web1; }
-  { .backend = web2; }
-}
-
-director ssl_director round-robin {
-  { .backend = web1_ssl; }
-  { .backend = web2_ssl; }
+sub vcl_init {
+  # Define the director that determines how to distribute incoming requests.
+  new default_director = directors.round_robin();
+  default_director.add_backend(web1);
+  default_director.add_backend(web2);
 }
 
 # Respond to incoming requests.
 sub vcl_recv {
-  # Set the director to cycle between web servers.
-  if (server.port == 443) {
-    set req.backend = ssl_director;
-  }
-  else {
-   set req.backend = default_director;
-  }
 
   # Use anonymous, cached pages if all backends are down.
-  if (!req.backend.healthy) {
+  if (!std.healthy(req.backend_hint)) {
     unset req.http.Cookie;
   }
-
-  # Allow the backend to serve up stale content if it is responding slowly.
-  set req.grace = 6h;
 
   # Do not cache these paths.
   if (req.url ~ "^/status\.php$" ||
@@ -68,9 +53,9 @@ sub vcl_recv {
   }
 
   # Do not allow outside access to cron.php or install.php.
-  if (req.url ~ "^/(cron|install)\.php$" && !client.ip ~ internal) {
+  if (req.url ~ "^/(cron|install)\.php$" && !client.ip ~ privileged) {
     # Have Varnish throw the error directly.
-    error 404 "Page not found.";
+    return(synth(404, "Page not found."));
     # Use a custom error page that you've defined in Drupal at the path "404".
     # set req.url = "/404";
   }
@@ -136,19 +121,21 @@ sub vcl_hash {
 }
 
 # Code determining what to do when serving items from the Apache servers.
-sub vcl_fetch {
+sub vcl_backend_response {
   # Don't allow static files to set cookies.
-  if (req.url ~ "(?i)\.(png|gif|jpeg|jpg|ico|swf|css|js|html|htm)(\?[a-z0-9]+)?$") {
+  if (bereq.url ~ "(?i)\.(png|gif|jpeg|jpg|ico|swf|css|js|html|htm)(\?[a-z0-9]+)?$") {
     # beresp == Back-end response from the web server.
     unset beresp.http.set-cookie;
   }
 
-  # Allow items to be stale if needed.
-  set beresp.grace = 6h;
+  # Allow stale-while-revalidate for up to 6 hours
+  if (beresp.grace <= 6h) {
+    set beresp.grace = 6h;
+  }
 }
 
 # In the event of an error, show friendlier messages.
-sub vcl_error {
+sub vcl_backend_error {
   # Redirect to some other URL in the case of a homepage failure.
   #if (req.url ~ "^/?$") {
   #  set obj.status = 302;
@@ -156,8 +143,8 @@ sub vcl_error {
   #}
 
   # Otherwise redirect to the homepage, which will likely be in the cache.
-  set obj.http.Content-Type = "text/html; charset=utf-8";
-  synthetic {"
+  set beresp.http.Content-Type = "text/html; charset=utf-8";
+  synthetic ({"
 <html>
 <head>
   <title>Page Unavailable</title>
@@ -173,10 +160,10 @@ sub vcl_error {
     <h1 class="title">Page Unavailable</h1>
     <p>The page you requested is temporarily unavailable.</p>
     <p>We're redirecting you to the <a href="/">homepage</a> in 5 seconds.</p>
-    <div class="error">(Error "} + obj.status + " " + obj.response + {")</div>
+    <div class="error">(Error "} + beresp.status + " " + beresp.reason + {")</div>
   </div>
 </body>
 </html>
-"};
+"});
   return (deliver);
 }
