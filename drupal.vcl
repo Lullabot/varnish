@@ -1,5 +1,5 @@
 #
-# Customized VCL file for serving up a Drupal site with multiple back-ends.
+# Customized VCL file for serving up a Drupal site on a single web host.
 #
 # For more information on this VCL, visit the Lullabot article:
 # http://www.lullabot.com/articles/varnish-multiple-web-servers-drupal
