@@ -25,7 +25,7 @@ backend default {
 sub vcl_recv {
 
   # Do not allow outside access to cron.php or install.php.
-  if (req.url ~ "^/(cron|instal|update|xmlrpc)\.php$" && !client.ip ~ privileged) {
+  if (req.url ~ "^/(cron|install|update|xmlrpc)\.php$" && !client.ip ~ privileged) {
     # Have Varnish throw the error directly.
     return(synth(404, "Page not found."));
 
