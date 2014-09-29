@@ -20,17 +20,11 @@ backend default {
 
 # Respond to incoming requests.
 sub vcl_recv {
-  # Use anonymous, cached pages if all backends are down.
-  if (!req.backend.healthy) {
-    unset req.http.Cookie;
-  }
-
   # Allow the backend to serve up stale content if it is responding slowly.
   set req.grace = 6h;
 
   # Do not cache these paths.
-  if (req.url ~ "^/status\.php$" ||
-      req.url ~ "^/update\.php$" ||
+  if (req.url ~ "^/update\.php$" ||
       req.url ~ "^/ooyala/ping$" ||
       req.url ~ "^/admin/build/features" ||
       req.url ~ "^/info/.*$" ||
