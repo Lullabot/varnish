@@ -18,9 +18,15 @@ acl privileged {
 }
 
 # Define the list of backends (web servers).
-# Port 80 Backend Servers
-backend web1 { .host = "192.10.0.1"; .probe = { .url = "/status.php"; .interval = 5s; .timeout = 1s; .window = 5;.threshold = 3; }}
-backend web2 { .host = "192.10.0.2"; .probe = { .url = "/status.php"; .interval = 5s; .timeout = 1s; .window = 5;.threshold = 3; }}
+backend web1 {
+  .host = "192.10.0.1";
+  .probe = { .url = "/status.php"; .interval = 5s; .timeout = 1s; .window = 5;.threshold = 3; }
+}
+
+backend web2 {
+  .host = "192.10.0.2";
+  .probe = { .url = "/status.php"; .interval = 5s; .timeout = 1s; .window = 5;.threshold = 3; }
+}
 
 sub vcl_init {
   # Define the director that determines how to distribute incoming requests.
@@ -35,8 +41,8 @@ sub vcl_recv {
   # Send traffic to default_director to be load balanced.
   set req.backend_hint = default_director.backend();
 
-  # Do not allow outside access to cron.php or install.php.
-  if (req.url ~ "^/(cron|install|update|xmlrpc)\.php$" && !client.ip ~ privileged) {
+  # Do not allow outside access to special pages.
+  if (req.url ~ "^/(cron|install|status|update|xmlrpc)\.php$" && !client.ip ~ privileged) {
     # Have Varnish throw the error directly.
     return(synth(404, "Page not found."));
 
