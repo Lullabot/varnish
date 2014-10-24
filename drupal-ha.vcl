@@ -32,6 +32,9 @@ sub vcl_init {
 # Respond to incoming requests.
 sub vcl_recv {
 
+  # Send traffic to default_director to be load balanced.
+  set req.backend_hint = default_director.backend();
+
   # Do not allow outside access to cron.php or install.php.
   if (req.url ~ "^/(cron|install|update|xmlrpc)\.php$" && !client.ip ~ privileged) {
     # Have Varnish throw the error directly.
