@@ -24,6 +24,12 @@ backend default {
 # Respond to incoming requests.
 sub vcl_recv {
 
+  # A lot of malicious bots pose as IE6. If you do not need IE6 support,
+  # prevent this traffic from reaching your backend.
+  #if (req.http.User-Agent ~ "MSIE 6.0") {
+  #  return(synth(403, "Internet Explorer 6 is not supported."));
+  #}
+
   # Do not allow outside access to cron.php or install.php.
   if (req.url ~ "^/(cron|install|update|xmlrpc)\.php$" && !client.ip ~ privileged) {
     # Have Varnish throw the error directly.
