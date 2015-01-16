@@ -103,8 +103,8 @@ sub vcl_recv {
     }
   }
 
-  # Always cache the following file types for all users.
-  if (req.url ~ "(?i)\.(png|gif|jpeg|jpg|ico|swf|css|js|html|htm)(\?[a-z0-9]+)?$") {
+  # Always cache static assets in /files and /themes
+  if (req.url ~ "^/sites/.*/(files|themes)/") {
     unset req.http.Cookie;
   }
 
@@ -157,8 +157,8 @@ sub vcl_hash {
 
 # Code determining what to do when serving items from the Apache servers.
 sub vcl_backend_response {
-  # Don't allow static files to set cookies.
-  if (bereq.url ~ "(?i)\.(png|gif|jpeg|jpg|ico|swf|css|js|html|htm)(\?[a-z0-9]+)?$") {
+  # Don't allow static assets in /files or /themes to set cookies
+  if (bereq.url ~ "^/sites/.*/(files|themes)/") {
     # beresp == Back-end response from the web server.
     unset beresp.http.set-cookie;
   }
