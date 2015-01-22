@@ -106,7 +106,7 @@ sub vcl_recv {
   # Strip cookies from static assets in /files, /libraries, and /themes.
   # These requests are automatically disqualified from being cached if there are
   # any cookies. Stripping the cookies increases the hit rate.
-  if (req.url ~ "^/sites/.*/(files|libraries|themes)/") {
+  if (req.url ~ "^(/sites/.*)?/(files|libraries|themes)/") {
     unset req.http.Cookie;
   }
 
@@ -160,7 +160,7 @@ sub vcl_hash {
 # Code determining what to do when serving items from the Apache servers.
 sub vcl_backend_response {
   # Don't allow static assets in /files, /libraries, or /themes to set cookies
-  if (bereq.url ~ "^/sites/.*/(files|libraries|themes)/") {
+  if (bereq.url ~ "^(/sites/.*)/(files|libraries|themes)/") {
     # beresp == Back-end response from the web server.
     unset beresp.http.set-cookie;
   }
