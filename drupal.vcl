@@ -80,7 +80,9 @@ sub vcl_recv {
     }
   }
 
-  # Always cache static assets in /files, /libraries, and /themes
+  # Strip cookies from static assets in /files, /libraries, and /themes.
+  # These requests are automatically disqualified from being cached if there are
+  # any cookies. Stripping the cookies increases the hit rate.
   if (req.url ~ "^/sites/.*/(files|libraries|themes)/") {
     unset req.http.Cookie;
   }
