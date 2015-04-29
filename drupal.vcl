@@ -80,10 +80,16 @@ sub vcl_recv {
     }
   }
 
-  # Always cache the following file types for all users.
+  # Strip cookies from the following file types for all users.
+  # These requests are automatically disqualified from being cached if there are
+  # any cookies. Stripping the cookies increases the hit rate.
   if (req.url ~ "(?i)\.(png|gif|jpeg|jpg|ico|swf|css|js|html|htm)(\?[a-z0-9]+)?$") {
     unset req.http.Cookie;
   }
+  # Alternatively, strip cookies from directories of static assets.
+  #if (req.url ~ "^(/sites/.*)?/(files|libraries|themes)/") {
+  #  unset req.http.Cookie;
+  #}
 
   # Remove all cookies that Drupal doesn't need to know about. ANY remaining
   # cookie will cause the request to pass-through to Apache. For the most part
@@ -134,11 +140,16 @@ sub vcl_hash {
 
 # Code determining what to do when serving items from the Apache servers.
 sub vcl_backend_response {
-  # Don't allow static files to set cookies.
+  # Don't allow these file types to set cookies.
+  # Prevent these file types from setting cookies to increase the hit rate.
+  # Setting a cookie automatically disqualifies an object from being cached.
   if (bereq.url ~ "(?i)\.(png|gif|jpeg|jpg|ico|swf|css|js|html|htm)(\?[a-z0-9]+)?$") {
-    # beresp == Back-end response from the web server.
     unset beresp.http.set-cookie;
   }
+  # Alternatively, specifiy known paths that contain static assets.
+  #if (bereq.url ~ "^(/sites/.*)/(files|libraries|themes)/") {
+  #  unset beresp.http.set-cookie;
+  #}
 
   # Allow stale-while-revalidate for up to 6 hours
   if (beresp.grace <= 6h) {
